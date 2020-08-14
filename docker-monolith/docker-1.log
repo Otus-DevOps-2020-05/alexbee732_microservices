@@ -1,0 +1,9 @@
+REPOSITORY                 TAG                 IMAGE ID            CREATED             SIZE
+yourname/ubuntu-tmp-file   latest              10577d15f5bd        4 minutes ago       64.2MB
+ubuntu                     18.04               2eb2d388e1a2        2 weeks ago         64.2MB
+hello-world                latest              bf756fb1ae65        7 months ago        13.3kB
+
+Задание со *:
+По выводам docker inspect <ID> можно сделать следующие выводы:
+Image представляет собой образ диска. Docker inspect для него показывает информацию о репозитории, промежуточных слоях, котнейнере, который его использует.
+Container представляет собой подобие виртуальной машины, на которой крутится образ Image. Docker inspect для него дает информацию о конфигурации системы, сети, используемом образе.
