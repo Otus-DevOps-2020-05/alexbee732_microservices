@@ -26,7 +26,7 @@ yc compute instance create \
 Настроили там docker-host:
 docker-machine create \
 --driver generic \
---generic-ip-address=84.201.173.59 \
+--generic-ip-address=84.201.157.238 \
 --generic-ssh-user yc-user \
 --generic-ssh-key ~/.ssh/appuser \
 docker-host
@@ -58,3 +58,56 @@ docker run -d --network=reddit -p 9292:9292 yc-user/ui:2.0
 
 Почистили инстанс в yc:
 yc compute instances delete docker-host
+
+# ДЗ №15 Docker-4
+
+Создали контейнер с none сетью и запустили ifconfig:
+docker run -ti --rm --network none joffotron/docker-net-tools -c ifconfig
+
+Создали контейнер с host сетью и запустили ifconfig:
+docker run -ti --rm --network host joffotron/docker-net-tools -c ifconfig
+
+Попробовали запустить несколько контейнеров с nginx с сетью host:
+docker run --network host -d nginx
+В итоге все контейнеры кроме первого сами останавливались (видимо из-за того, что порт уже был занят первым контейнером, а он общий в сети host)
+
+Запустили проект reddit с использованием bringe сети:
+docker network create reddit --driver bridge
+docker run -d --network=reddit mongo:latest
+docker run -d --network=reddit yc-user/post:1.0
+docker run -d --network=reddit yc-user/comment:1.0
+docker run -d --network=reddit -p 9292:9292 yc-user/ui:1.0
+(так не вышло из-за отсутствия алиасов)
+
+После добавления алиасов, используемых в Docker файлах, все начинает работать:
+docker run -d --network=reddit --network-alias=post_db --network-alias=comment_db mongo:latest
+docker run -d --network=reddit --network-alias=post yc-user/post:1.0
+docker run -d --network=reddit --network-alias=comment  yc-user/comment:1.0
+docker run -d --network=reddit -p 9292:9292 yc-user/ui:1.0
+
+Запускаем проект на двух bridge сетях:
+docker network create back_net --subnet=10.0.2.0/24
+docker network create front_net --subnet=10.0.1.0/24
+
+docker run -d --network=front_net -p 9292:9292 --name ui  yc-user/ui:1.0
+docker run -d --network=back_net --name comment  yc-user/comment:1.0
+docker run -d --network=back_net --name post  yc-user/post:1.0
+docker run -d --network=back_net --name mongo_db --network-alias=post_db --network-alias=comment_db mongo:latest
+
+Подключаем контейнеры ко второй сети:
+docker network connect front_net post
+docker network connect front_net comment
+
+Зайти на docker-machine по ssh:
+docker-machine ssh docker-host
+
+Установили docker-compose, создали файл docker-compose.yml с описанием сервисов, томов и сетей
+Изменили docker-compose.yml для работы приложения в двух bringe сетях
+docker-compose up -d
+docker-compose ps
+
+Параметризовали версию монги и порт ui и добавили переменные в .env файл
+
+Узнайте как образуется базовое имя проекта. Можно ли его задать? Если можно то как?
+src_comment_1, src_post_1, src_post_db_1, src_ui_1
+Очевидно, дефолтное название получается из названия директории. Переопределяется флагом -p или через переменную окружения COMPOSE_PROJECT_NAME.
