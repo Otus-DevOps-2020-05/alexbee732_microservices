@@ -9,14 +9,14 @@ services:
         aliases:
           - comment_db
   ui:
-    build: ./ui
+    build: ../src/ui
     image: ${USERNAME}/ui:1.0
     ports:
       - ${REDDIT_UI_PORT}:${REDDIT_UI_PORT}/tcp
     networks:
       - front_net
   post:
-    build: ./post-py
+    build: ../src/post-py
     image: ${USERNAME}/post:1.0
     networks:
       front_net:
@@ -26,7 +26,7 @@ services:
         aliases:
           - post
   comment:
-    build: ./comment
+    build: ../src/comment
     image: ${USERNAME}/comment:1.0
     networks:
       front_net:
