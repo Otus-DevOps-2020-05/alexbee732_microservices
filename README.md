@@ -111,3 +111,68 @@ docker-compose ps
 Узнайте как образуется базовое имя проекта. Можно ли его задать? Если можно то как?
 src_comment_1, src_post_1, src_post_db_1, src_ui_1
 Очевидно, дефолтное название получается из названия директории. Переопределяется флагом -p или через переменную окружения COMPOSE_PROJECT_NAME.
+
+# ДЗ №17 monitoring-1
+
+Подняли машинку в yc и развернули на ней docker:
+yc compute instance create \
+ --name docker-host \
+ --zone ru-central1-a \
+ --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+ --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+ --ssh-key ~/.ssh/appuser.pub
+ 
+docker-machine create \
+ --driver generic \
+ --generic-ip-address=130.193.49.73 \
+ --generic-ssh-user yc-user \
+ --generic-ssh-key ~/.ssh/appuser \
+ docker-host
+ 
+eval $(docker-machine env docker-host)
+ 
+Запустили контейнер с образов prometeus:
+docker run --rm -p 9090:9090 -d --name prometheus prom/prometheus
+
+Создали Docker файл для поднятия prometheus и файл Prometheus.yml с настройками, запустили:
+export USER_NAME=alexbee732
+docker build -t $USER_NAME/prometheus .
+
+Собрали образы микросервисов:
+for i in ui post-py comment; do cd src/$i; bash docker_build.sh; cd -; done
+
+Добавили сервис prometheus в docker-compose.yml и запустили контейнеры:
+docker-compose up -d
+
+Попробовали выключать и включать контейнер post для проверки мониторинга ui_health:
+docker-compose stop post
+docker-compose start post
+
+Добавили сервис node-exporter в docker-compose.yml для мониторинга работы докер хоста + добавили новый сервис для отследивания в prometheus.yml, пересобрали образы и перезапустили:
+docker build -t $USER_NAME/prometheus .
+docker-compose down
+docker-compose up -d
+
+Посмотрели график node_load1 с загрузкой cpu, прогрузили инстанс и посмотрели, как график меняется:
+docker-machine ssh docker-host
+yes > /dev/null
+
+Запушили образы на докер хаб:
+docker login
+for i in ui post-py comment prometheus; do docker push $USER_NAME/$i; cd -; done
+
+Задание со *:
+Добавили в docker-compose.yml сервис blackbox-exporter
+Добавили blackbox в конфиг Prometheus.yml (проверку http://130.193.49.73:9292/, т.е. ui приложеньки)
+Пересобрали образ и перезапустили:
+docker-compose down
+docker build -t $USER_NAME/prometheus .
+docker-compose up -d
+Посмотрели на график probe_success, при этом останавливали и запускали контейнер ui, чтобы проверить работу, все супер:
+docker-compose stop ui
+docker-compose start ui
+
+Удалили виртуалку:
+docker-machine rm docker-host
+yc compute instance delete docker-host
+
