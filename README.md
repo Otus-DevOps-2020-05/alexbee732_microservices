@@ -264,3 +264,6 @@ docker-compose -f docker-compose-logging.yml -f docker-compose.yml down
 docker-compose -f docker-compose-logging.yml -f docker-compose.yml up -d
 
 Походили по страничке reddit и посмотрели трейсы
+
+* Анализ багнутой версии в Zipkin показал, что в post имеется задержка около 3х секунд в сравнении с хорошей версией.
+Порывшись в коде обнаружил time.sleep(3) в post_app.py в строке 167 :)
