@@ -8,16 +8,36 @@ services:
       back_net:
         aliases:
           - comment_db
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
   ui:
     build: ../src/ui
-    image: ${USERNAME}/ui:1.0
+    image: ${USER_NAME}/ui:logging
     ports:
       - ${REDDIT_UI_PORT}:${REDDIT_UI_PORT}/tcp
     networks:
       - front_net
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.ui
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
   post:
-    build: ../src/post-py
-    image: ${USERNAME}/post:1.0
+    image: ${USER_NAME}/post:logging
+    environment:
+      - POST_DATABASE_HOST=post_db
+      - POST_DATABASE=posts
+    depends_on:
+      - post_db
+    ports:
+      - "5000:5000"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: service.post
     networks:
       front_net:
         aliases:
@@ -25,9 +45,11 @@ services:
       back_net:
         aliases:
           - post
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
   comment:
     build: ../src/comment
-    image: ${USERNAME}/comment:1.0
+    image: ${USER_NAME}/comment:logging
     networks:
       front_net:
         aliases:
@@ -35,8 +57,10 @@ services:
       back_net:
         aliases:
           - comment
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
   prometheus:
-    image: ${USERNAME}/prometheus
+    image: ${USER_NAME}/prometheus
     ports:
       - '9090:9090'
     volumes:
@@ -50,6 +74,8 @@ services:
     networks:
       - front_net
       - back_net
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
   
   node-exporter:
     image: prom/node-exporter:v0.15.2
@@ -65,6 +91,8 @@ services:
     networks:
       - front_net
       - back_net
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
 
   blackbox-exporter:
     image: prom/blackbox-exporter:v0.17.0
@@ -74,6 +102,8 @@ services:
       - '9115:9115'
     networks:
       - front_net
+    environment:
+      - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
 
 volumes:
   post_db:

@@ -176,3 +176,94 @@ docker-compose start ui
 docker-machine rm docker-host
 yc compute instance delete docker-host
 
+# ДЗ №18 logging-1
+Обновили код микросервисов для поддержки логирования
+
+Пересобрали образы с новым кодом и запушили на докер хаб:
+export USER_NAME='alexbee732'
+cd ./src/ui && bash docker_build.sh && docker push $USER_NAME/ui
+cd ../post-py && bash docker_build.sh && docker push $USER_NAME/post
+cd ../comment && bash docker_build.sh && docker push $USER_NAME/comment
+
+Подняли машинку в yc и развернули на ней docker:
+yc compute instance create \
+ --name docker-host \
+ --zone ru-central1-a \
+ --memory 4 \
+ --network-interface subnet-name=default-ru-central1-a,nat-ip-version=ipv4 \
+ --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-1804-lts,size=15 \
+ --ssh-key ~/.ssh/appuser.pub
+ 
+docker-machine create \
+ --driver generic \
+ --generic-ip-address=178.154.224.89 \
+ --generic-ssh-user yc-user \
+ --generic-ssh-key ~/.ssh/appuser \
+ logging
+ 
+eval $(docker-machine env logging)
+
+Создали docker-compose-logging.yml для сборки EFK стэка (elasticsearch, fluentd, kibana)
+
+Создали Docker файл для сборки образа fluentd с прокидыванием конфигурационного файла
+Собрали образ fluentd:
+cd logging/fluentd
+docker build -t $USER_NAME/fluentd .
+
+Заменили теги в docker-compose.yml на :logging
+
+Запустили сервисы приложения и посмотрели логи post сервиса:
+cd docker && docker-compose up -d
+docker-compose logs -f post
+
+Заменили стандартный драйвер логов на fluentd для сервиса post в docker-compose.yml
+
+Поднимаем инфру логирования и перезапускаем сервисы:
+docker-compose -f docker-compose-logging.yml up -d
+docker-compose down
+docker-compose up -d
+
+Изучаем логи в кибане, понимаем, что удобно распарсить поле log для удобства поиска, для этого добавляем настройки в fluent.conf:
+<filter service.post>
+  @type parser
+  format json
+  key_name log
+</filter>
+Пересобираем fluentd и перезапускаем сервисы логирования:
+docker build -t $USER_NAME/fluentd .
+docker-compose -f docker-compose-logging.yml up -d fluentd
+
+В docker-compose.yml добавляем отправку логов во fluentd из сервиса ui и перезапускаем ui:
+docker-compose stop ui
+docker-compose rm ui
+docker-compose up -d
+
+В кибане нашли логи сервиса поиском по container_name : *ui* - видно, что логи не структурированы
+
+Для парсинга таких логов используем регулярки в настройках в fluent.conf:
+<filter service.ui>
+  @type parser
+  format /\[(?<time>[^\]]*)\]  (?<level>\S+) (?<user>\S+)[\W]*service=(?<service>\S+)[\W]*event=(?<event>\S+)[\W]*(?:path=(?<path>\S+)[\W]*)?request_id=(?<request_id>\S+)[\W]*(?:remote_addr=(?<remote_addr>\S+)[\W]*)?(?:method= (?<method>\S+)[\W]*)?(?:response_status=(?<response_status>\S+)[\W]*)?(?:message='(?<message>[^\']*)[\W]*)?/
+  key_name log
+</filter>
+Пересобрали и перезапустили образ:
+docker build -t $USER_NAME/fluentd .
+docker-compose -f docker-compose-logging.yml up -d fluentd
+
+Заменили регулярки на grok шаблоны в fluent.conf и пересобрали образ
+
+Добавили Zipkin в compose-файл сервисов логирования
+Добавили во все сервисы:
+environment:
+  - ZIPKIN_ENABLED=${ZIPKIN_ENABLED}
+Перезапустили сервисы:
+docker-compose up -d
+
+Добавили сети из сервисов в инфра-сервис Zipkin и переподняли сервисы логирования:
+docker-compose -f docker-compose-logging.yml -f docker-compose.yml down
+docker-compose -f docker-compose-logging.yml -f docker-compose.yml up -d
+
+Походили по страничке reddit и посмотрели трейсы
+
+* Анализ багнутой версии в Zipkin показал, что в post имеется задержка около 3х секунд в сравнении с хорошей версией.
+Порывшись в коде обнаружил time.sleep(3) в post_app.py в строке 167 :)
