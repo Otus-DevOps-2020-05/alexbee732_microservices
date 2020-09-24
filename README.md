@@ -267,3 +267,12 @@ docker-compose -f docker-compose-logging.yml -f docker-compose.yml up -d
 
 * Анализ багнутой версии в Zipkin показал, что в post имеется задержка около 3х секунд в сравнении с хорошей версией.
 Порывшись в коде обнаружил time.sleep(3) в post_app.py в строке 167 :)
+
+# ДЗ №19 kubernetes-1
+
+Написал скрипт start.sh для разворачивания kubernetes в яндекс облаке в один клик
+За основу взят гайд YC Kubernetes the Hard Way: https://gitlab.com/AlPervakov/yc-kubernetes-the-hart-way/-/tree/master/docs
+Инфра в yc полностью разворачивается используя terraform
+Мастер и воркер ноды провижинятся с использованием ansible (копирование + запуск скриптиков на хостах)
+Облако сворачивается скриптом destroy.sh
+Скринкаст процесса разворачивания: https://yadi.sk/i/h39E_kw8q3fAMg

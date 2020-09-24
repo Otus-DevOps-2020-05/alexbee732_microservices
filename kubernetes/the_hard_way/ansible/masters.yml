@@ -1,0 +1,19 @@
+---
+- name: Configure hosts & deploy application
+  hosts: masters
+
+  tasks:
+    - name: Copy file with owner and permissions
+      copy:
+        src: ./scripts/masters_etcd.sh
+        dest: ~/etcd.sh
+        mode: '0755'
+    - name: Copy file with owner and permissions
+      copy:
+        src: ./scripts/masters_components.sh
+        dest: ~/components.sh
+        mode: '0755'
+    - name: Execute the script
+      command: sh ~/etcd.sh
+    - name: Execute the script
+      command: sh ~/components.sh

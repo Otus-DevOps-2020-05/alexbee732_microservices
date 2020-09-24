@@ -1,0 +1,12 @@
+---
+- name: Configure hosts & deploy application
+  hosts: workers
+
+  tasks:
+    - name: Copy file with owner and permissions
+      copy:
+        src: ./scripts/workers.sh
+        dest: ~/workers.sh
+        mode: '0755'
+    - name: Execute the script
+      command: sh ~/workers.sh
