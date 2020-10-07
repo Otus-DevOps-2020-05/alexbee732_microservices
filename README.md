@@ -321,3 +321,13 @@ ubectl apply -f dev-namespace.yml
 kubectl delete -f .
 kubectl apply -n dev -f .
 minikube service ui -n dev
+
+Развернули Managed Service for Kubernetes в яндекс облаке
+Подключились к кластеру в облаке:
+yc managed-kubernetes cluster get-credentials haska8s --external
+
+Деплоим приложение:
+kubectl apply -f ./kubernetes/reddit/dev-namespace.yml
+kubectl apply -f ./kubernetes/reddit/ -n dev
+kubectl get nodes -o wide
+kubectl describe service ui -n dev | grep NodePort
