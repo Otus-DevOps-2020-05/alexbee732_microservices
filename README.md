@@ -276,3 +276,58 @@ docker-compose -f docker-compose-logging.yml -f docker-compose.yml up -d
 Мастер и воркер ноды провижинятся с использованием ansible (копирование + запуск скриптиков на хостах)
 Облако сворачивается скриптом destroy.sh
 Скринкаст процесса разворачивания: https://yadi.sk/i/h39E_kw8q3fAMg
+
+# ДЗ №20 kubernetes-2
+
+Установили Minikube
+https://kubernetes.io/docs/tasks/tools/install-minikube/
+
+Запустили кубер локально в virtualbox:
+minikube start --driver=virtualbox
+
+Посмотрели текущий контекст и список контекстов:
+kubeclt config current-context
+kubectl config get-contexts
+
+Запустили приложение ui:
+kubectl apply -f ui-deployment.yml
+
+Убедились, что все работает:
+kubectl get deployment
+
+Пробросили порты через kubectl, чтобы проверить на localhost:8080:
+kubectl get pods --selector component=ui
+kubectl port-forward ui-644cd574bf-9hcq9 8080:9292
+
+Создали сервисы для comment, post и mongodb для доступов по имени и порту из любых подов в нэймспейсе
+Настроили сервисы для обращения к базе данных из post и comment
+
+Создали сервис ui-service.yml для доступа к ui снаружи (type: NodePort)
+Тип NodePort - на каждой ноде кластера открывает порт из диапазона 30000-32767 и переправляет
+трафик с этого порта на тот, который указан в targetPort Pod (похоже на стандартный expose в docker)
+
+minikube service ui
+minikube services list
+
+Список аддонов minikube:
+minikube addons list
+
+Открыли и посмотрели дашборд:
+minikube addons enable dashboard
+minikube dashboard
+
+Создали namespace dev и запустили приложение в нем:
+ubectl apply -f dev-namespace.yml
+kubectl delete -f .
+kubectl apply -n dev -f .
+minikube service ui -n dev
+
+Развернули Managed Service for Kubernetes в яндекс облаке
+Подключились к кластеру в облаке:
+yc managed-kubernetes cluster get-credentials haska8s --external
+
+Деплоим приложение:
+kubectl apply -f ./kubernetes/reddit/dev-namespace.yml
+kubectl apply -f ./kubernetes/reddit/ -n dev
+kubectl get nodes -o wide
+kubectl describe service ui -n dev | grep NodePort
