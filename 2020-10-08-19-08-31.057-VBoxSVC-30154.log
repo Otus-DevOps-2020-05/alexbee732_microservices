@@ -1,0 +1,7 @@
+Log created: 2020-10-08T19:08:31.575002000Z
+Process ID:  30154 (0x75ca)
+Parent PID:  3411 (0xd53)
+Executable:  /usr/lib/virtualbox/VBoxSVC
+Arg[0]: /usr/lib/virtualbox/VBoxSVC
+Arg[1]: --auto-shutdown
+AddRef: illegal refcnt=3221225469 state=2

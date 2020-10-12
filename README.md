@@ -307,7 +307,7 @@ kubectl port-forward ui-644cd574bf-9hcq9 8080:9292
 трафик с этого порта на тот, который указан в targetPort Pod (похоже на стандартный expose в docker)
 
 minikube service ui
-minikube services list
+minikube service list
 
 Список аддонов minikube:
 minikube addons list
@@ -331,3 +331,34 @@ kubectl apply -f ./kubernetes/reddit/dev-namespace.yml
 kubectl apply -f ./kubernetes/reddit/ -n dev
 kubectl get nodes -o wide
 kubectl describe service ui -n dev | grep NodePort
+
+# ДЗ №21 kubernetes-3
+
+Создали ui-ingress.yml с описанием ingress сервиса
+Применили все манифесты:
+kubectl apply -n dev -f .
+
+Ingress не взлетел, т.к. ingress контроллера в yc у нас не было
+Установили ingress контроллер, используя helm:
+
+curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+sudo apt-get install apt-transport-https --yes
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
+
+https://kubernetes.github.io/ingress-nginx/deploy/#using-helm
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm install my-release ingress-nginx/ingress-nginx
+
+Посмотрели информацию об ingress:
+kubectl get ingress -n dev
+
+NAME   CLASS    HOSTS   ADDRESS         PORTS   AGE
+ui     <none>   *       84.201.128.21   80      27m
+
+Приложение стало доступно снаружи по адресу 84.201.128.21
+Настроили подключение tls
+
+Настроили хранилище для монги, используя PersistentVolume, PersistentVolumeClaim и StorageClass, настроили динамическое PVC
+Теперь при удалении и пересоздании деплоймента с монгой данные сохраняются
