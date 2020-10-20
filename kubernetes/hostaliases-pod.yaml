@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostaliases-pod
+spec:
+  restartPolicy: Never
+  hostAliases:
+  - ip: "84.201.128.38"
+    hostnames:
+    - "gitlab.example.co"
+  containers:
+  - name: cat-hosts
+    image: busybox
+    command:
+    - cat
+    args:
+    - "/etc/hosts"

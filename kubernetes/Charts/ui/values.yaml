@@ -1,0 +1,13 @@
+---
+service:
+  internalPort: 9292
+  externalPort: 9292
+
+image:
+  repository: alexbee732/ui
+  tag: master
+
+postHost:
+postPort:
+commentHost:
+commentPort:

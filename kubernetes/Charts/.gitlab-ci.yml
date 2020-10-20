@@ -1,0 +1,96 @@
+image: alpine/helm:3.3.4
+
+stages:
+  - staging
+  - production
+
+staging:
+  stage: staging
+  variables:
+    KUBE_NAMESPACE: staging
+    host: stage.devcpp.ru
+    name: $CI_ENVIRONMENT_SLUG
+    CI_REGISTRY: "index.docker.io"
+    CI_APPLICATION_REPOSITORY: $CI_REGISTRY/$CI_PROJECT_PATH
+    CI_APPLICATION_TAG: $CI_COMMIT_REF_SLUG
+    CI_CONTAINER_NAME: ci_job_build_${CI_JOB_ID}
+  environment:
+    name: staging
+    url: http://stage.devcpp.ru
+  only:
+    refs:
+      - master
+    kubernetes: active
+  before_script:
+    # install_dependencies
+    - apk add -U openssl curl tar gzip bash ca-certificates git
+    - curl  -o /usr/bin/sync-repo.sh https://raw.githubusercontent.com/kubernetes/helm/master/scripts/sync-repo.sh
+    - chmod a+x /usr/bin/sync-repo.sh
+    - curl -L -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x /usr/bin/kubectl
+    - kubectl version --client
+  script:
+    # deploy
+    - echo $KUBE_NAMESPACE
+    - export track="${1-stable}"
+    - >
+      if [[ "$track" != "stable" ]]; then
+        name="$name-$track"
+      fi
+    - helm dep build reddit
+    - >
+      helm upgrade --install \
+        --wait \
+        --set ui.ingress.host="$host" \
+        --set ui.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/ui/raw/master/VERSION)" \
+        --set post.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/post/raw/master/VERSION)" \
+        --set comment.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/comment/raw/master/VERSION)" \
+        --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
+        "$name" \
+        reddit/
+
+production:
+  stage: production
+  variables:
+    KUBE_NAMESPACE: production
+    host: prod.devcpp.ru
+    name: $CI_ENVIRONMENT_SLUG
+    CI_REGISTRY: "index.docker.io"
+    CI_APPLICATION_REPOSITORY: $CI_REGISTRY/$CI_PROJECT_PATH
+    CI_APPLICATION_TAG: $CI_COMMIT_REF_SLUG
+    CI_CONTAINER_NAME: ci_job_build_${CI_JOB_ID}
+  environment:
+    name: production
+    url: http://prod.devcpp.ru
+  when: manual
+  only:
+    refs:
+      - master
+    kubernetes: active
+  before_script:
+    # install_dependencies
+    - apk add -U openssl curl tar gzip bash ca-certificates git
+    - curl  -o /usr/bin/sync-repo.sh https://raw.githubusercontent.com/kubernetes/helm/master/scripts/sync-repo.sh
+    - chmod a+x /usr/bin/sync-repo.sh
+    - curl -L -o /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x /usr/bin/kubectl
+    - kubectl version --client
+  script:
+    # deploy
+    - echo $KUBE_NAMESPACE
+    - export track="${1-stable}"
+    - >
+      if [[ "$track" != "stable" ]]; then
+        name="$name-$track"
+      fi
+    - helm dep build reddit
+    - >
+      helm upgrade --install \
+        --wait \
+        --set ui.ingress.host="$host" \
+        --set ui.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/ui/raw/master/VERSION)" \
+        --set post.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/post/raw/master/VERSION)" \
+        --set comment.image.tag="$(curl https://gitlab.devcpp.ru/$CI_PROJECT_NAMESPACE/comment/raw/master/VERSION)" \
+        --version="$CI_PIPELINE_ID-$CI_JOB_ID" \
+        "$name" \
+        reddit/
