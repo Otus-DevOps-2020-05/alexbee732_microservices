@@ -18,3 +18,5 @@ ui:
     tag: master
   service:
     externalPort: 9292
+  ingress:
+    host: reddit
